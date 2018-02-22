@@ -10,6 +10,7 @@ EMPTY = ' '
 
 NUM_COLS = 7
 NUM_ROWS = 6
+NUM_STREAK_TO_WIN = 4
 
 
 def all_same(items):
@@ -92,43 +93,69 @@ class Board:
         col[free_slot] = piece
         return MoveStatus(True, (selected_col, free_slot))
 
+    def find_longest_streak(self, position):
+        """Need to check neighbours to see if we can find longest streak"""
+
+        def bidirectional_streak(grid, position, direction):
+            col, row = position
+            curr_position = self._grid[col][row]
+
+            if direction == '-':
+                col_offset = [1, -1]
+                row_offset = [0, 0]
+            elif direction == '|':
+                col_offset = [0, 0]
+                row_offset = [1, -1]
+            elif direction == '/':
+                col_offset = [1, -1]
+                row_offset = [1, -1]
+            elif direction == '\\':
+                col_offset = [1, -1]
+                row_offset = [-1, 1]
+            else:
+                raise RuntimeError('invalid direction')
+
+            streak = set([position])
+            # cycle thru both directions
+            for value in range(2):
+                counter = 1
+
+                while True:
+                    col_to_check = col + col_offset[value] * counter
+                    row_to_check = row + row_offset[value] * counter
+
+                    try:
+                        position_to_check = (
+                            self._grid[col_to_check][row_to_check])
+                    except KeyError:
+                        break
+
+                    if position_to_check != curr_position:
+                        break
+
+                    streak.add((col_to_check, row_to_check))
+                    counter += 1
+
+            return streak
+
+        longest_streak = max(
+            len(bidirectional_streak(self._grid, position, '-')),
+            len(bidirectional_streak(self._grid, position, '|')),
+            len(bidirectional_streak(self._grid, position, '/')),
+            len(bidirectional_streak(self._grid, position, '\\'))
+        )
+        return longest_streak
+
     def check_win(self, position):
         """Given the position of a piece, check to see if there is a possible
         four in a row on the board"""
 
-        # victory positions can go in 8 directions, get them all
-        def calculate_line(pos, col_offset: int, row_offset: int):
-            col, row = pos
-            streak = [pos]
-            for count in range(1, 4):
-                streak.append((col + count * col_offset,
-                               row + count * row_offset))
-            return streak
+        if self.find_longest_streak(position) >= NUM_STREAK_TO_WIN:
+            print('Winner! Winner! Chicken Dinner!')
 
-        # cycle thru each direction and got possible streak paths
-        # TODO this only cycles lines where position is first or last
-        # need to think of a better way to do this, we should find longest
-        # streak based on where the last position entered is
-        possible_winning_lines = []
-        possible_winning_lines.append(calculate_line(position, 0, 1))  # N
-        possible_winning_lines.append(calculate_line(position, 1, 1))  # NE
-        possible_winning_lines.append(calculate_line(position, 1, 0))  # E
-        possible_winning_lines.append(calculate_line(position, 1, -1))  # SE
-        possible_winning_lines.append(calculate_line(position, 0, -1))  # S
-        possible_winning_lines.append(calculate_line(position, -1, -1))  # SW
-        possible_winning_lines.append(calculate_line(position, -1, 0))  # W
-        possible_winning_lines.append(calculate_line(position, -1, 1))  # NW
-
-        for line in possible_winning_lines:
-            try:
-                board_values = [self._grid[col][row] for col, row in line]
-            except KeyError:
-                continue
-
-            if all_same(board_values):
-                print('Winner! Winner! Chicken Dinner!')
-                print(f'{board_values[0]} wins!')
-                return True
+            col, row = position
+            print(f'{self._grid[col][row]} wins!')
+            return True
 
         return False
 
@@ -185,6 +212,8 @@ class ConnectFour:
 
 if __name__ == '__main__':
     game = ConnectFour()
+
+    # import pdb; pdb.set_trace()
 
     # Game Loop
     while True:
