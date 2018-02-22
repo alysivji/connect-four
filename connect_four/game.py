@@ -1,5 +1,9 @@
 """Connect Four game"""
 
+import itertools
+import os
+from typing import NamedTuple
+
 PLAYER_ONE = '🔴'
 PLAYER_TWO = '🔵'
 EMPTY = ' '
@@ -11,6 +15,19 @@ NUM_ROWS = 6
 def all_same(items):
     return (items[0] != EMPTY and
             all(x == items[0] for x in items))
+
+
+def find_empty_slot(dict_to_check, empty_value):
+    """Given dictionary, find key of empty slot, else return -1"""
+    for key, item in dict_to_check.items():
+        if item == empty_value:
+            return key
+    return -1
+
+
+class MoveStatus(NamedTuple):
+    status: bool
+    piece_position: tuple
 
 
 class Board:
@@ -50,7 +67,8 @@ class Board:
 
         # reverse and print
         board_output.pop()  # remove last separator that is not required
-        # TODO column numers somewhere
+
+        # add TODO column numbers at top
         return '\n'.join(reversed(board_output))
 
     def __repr__(self):
@@ -62,21 +80,17 @@ class Board:
         try:
             col = self._grid[selected_col]
         except KeyError:
-            print('Not a valid key!')
-            return False
+            print('Not a valid column!')
+            return MoveStatus(False, (None))
 
-        free_slot = None
-        for key, item in col.items():
-            if item == EMPTY:
-                free_slot = key
-                break
+        free_slot = find_empty_slot(col, EMPTY)
 
-        if free_slot is None:
+        if free_slot == -1:
             print('Column is full!')
-            return False
+            return MoveStatus(False, (None))
 
         col[free_slot] = piece
-        return True
+        return MoveStatus(True, (selected_col, free_slot))
 
     def check_win(self, position):
         """Given the position of a piece, check to see if there is a possible
@@ -92,6 +106,9 @@ class Board:
             return streak
 
         # cycle thru each direction and got possible streak paths
+        # TODO this only cycles lines where position is first or last
+        # need to think of a better way to do this, we should find longest
+        # streak based on where the last position entered is
         possible_winning_lines = []
         possible_winning_lines.append(calculate_line(position, 0, 1))  # N
         possible_winning_lines.append(calculate_line(position, 1, 1))  # NE
@@ -106,10 +123,8 @@ class Board:
             try:
                 board_values = [self._grid[col][row] for col, row in line]
             except KeyError:
-                print('Bad ', line)
                 continue
 
-            print('Good ', line)
             if all_same(board_values):
                 print('Winner! Winner! Chicken Dinner!')
                 print(f'{board_values[0]} wins!')
@@ -117,7 +132,83 @@ class Board:
 
         return False
 
+    def is_full(self):
+        for num, col in self._grid.items():
+            if find_empty_slot(col, EMPTY) != -1:
+                return False
+        return True
+
+
+class GameStatus(NamedTuple):
+    status: bool
+    msg: str
+
+
+class ConnectFour:
+    def __init__(self):
+        self.board = Board()
+        self.game_pieces_cycle = itertools.cycle([PLAYER_ONE, PLAYER_TWO])
+        self.turn = next(self.game_pieces_cycle)
+        self.last_move = None
+
+    def __repr__(self):
+        return f'{self.board}'
+
+    def next_turn(self):
+        self.turn = next(self.game_pieces_cycle)
+
+    def process_player_turn(self, column):
+        """Walk thru the process of a player's turn"""
+
+        try:
+            column = int(column)
+        except ValueError:
+            return GameStatus(False, 'Please enter a number')
+
+        if not (0 <= column <= NUM_COLS):
+            return GameStatus(False,
+                              f'Please enter a valid column (0-{NUM_COLS})')
+
+        turn_success, position = self.board.drop_piece(column, self.turn)
+        if not turn_success:
+            return GameStatus(False, 'Position is already taken, try again')
+
+        self.last_move = position
+        return GameStatus(True, 'All good')
+
+    def check_victory(self):
+        return self.board.check_win(self.last_move)
+
+    def tie_game(self):
+        return self.board.is_full()
+
 
 if __name__ == '__main__':
-    new_game = Board()
-    print(new_game)
+    game = ConnectFour()
+
+    # Game Loop
+    while True:
+        # GUI
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print(game)
+        print(f"{game.turn}'s turn.")
+
+        # Game Actions
+        position = input('Enter a position: ')
+        result = game.process_player_turn(position)
+
+        if not result.status:
+            print(result.msg)
+            continue
+
+        if game.check_victory():
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print(game)
+            print(f'{game.turn}  wins!')
+            break
+
+        if game.tie_game():
+            print("Nobody wins! aka Everybody Loses!")
+            break
+
+        game.next_turn()
