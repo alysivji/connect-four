@@ -20,10 +20,10 @@ def test_dropping_piece_in_full_column():
 
     # Act and Assert
     for _ in range(NUM_ROWS):
-        assert game.drop_piece(1, 'x') is True
+        assert game.drop_piece(1, 'x').status is True
 
     # full, now we cannot
-    assert game.drop_piece(1, 'x') is False
+    assert game.drop_piece(1, 'x').status is False
 
 
 def test_board_full():
