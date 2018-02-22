@@ -93,56 +93,56 @@ class Board:
         col[free_slot] = piece
         return MoveStatus(True, (selected_col, free_slot))
 
+    def bidirectional_streak_length(self, position, direction):
+        col, row = position
+        curr_position = self._grid[col][row]
+
+        if direction == '-':
+            col_offset = [1, -1]
+            row_offset = [0, 0]
+        elif direction == '|':
+            col_offset = [0, 0]
+            row_offset = [1, -1]
+        elif direction == '/':
+            col_offset = [1, -1]
+            row_offset = [1, -1]
+        elif direction == '\\':
+            col_offset = [1, -1]
+            row_offset = [-1, 1]
+        else:
+            raise RuntimeError('invalid direction')
+
+        streak = set([position])
+        # cycle thru both directions
+        for value in range(2):
+            counter = 1
+
+            while True:
+                col_to_check = col + col_offset[value] * counter
+                row_to_check = row + row_offset[value] * counter
+
+                try:
+                    position_to_check = (
+                        self._grid[col_to_check][row_to_check])
+                except KeyError:
+                    break
+
+                if position_to_check != curr_position:
+                    break
+
+                streak.add((col_to_check, row_to_check))
+                counter += 1
+
+        return streak
+
     def find_longest_streak(self, position):
         """Need to check neighbours to see if we can find longest streak"""
 
-        def bidirectional_streak(grid, position, direction):
-            col, row = position
-            curr_position = self._grid[col][row]
-
-            if direction == '-':
-                col_offset = [1, -1]
-                row_offset = [0, 0]
-            elif direction == '|':
-                col_offset = [0, 0]
-                row_offset = [1, -1]
-            elif direction == '/':
-                col_offset = [1, -1]
-                row_offset = [1, -1]
-            elif direction == '\\':
-                col_offset = [1, -1]
-                row_offset = [-1, 1]
-            else:
-                raise RuntimeError('invalid direction')
-
-            streak = set([position])
-            # cycle thru both directions
-            for value in range(2):
-                counter = 1
-
-                while True:
-                    col_to_check = col + col_offset[value] * counter
-                    row_to_check = row + row_offset[value] * counter
-
-                    try:
-                        position_to_check = (
-                            self._grid[col_to_check][row_to_check])
-                    except KeyError:
-                        break
-
-                    if position_to_check != curr_position:
-                        break
-
-                    streak.add((col_to_check, row_to_check))
-                    counter += 1
-
-            return streak
-
         longest_streak = max(
-            len(bidirectional_streak(self._grid, position, '-')),
-            len(bidirectional_streak(self._grid, position, '|')),
-            len(bidirectional_streak(self._grid, position, '/')),
-            len(bidirectional_streak(self._grid, position, '\\'))
+            len(self.bidirectional_streak_length(position, '-')),
+            len(self.bidirectional_streak_length(position, '|')),
+            len(self.bidirectional_streak_length(position, '/')),
+            len(self.bidirectional_streak_length(position, '\\'))
         )
         return longest_streak
 
