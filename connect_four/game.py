@@ -66,10 +66,10 @@ class Board:
             board_output.append(f'| {row_output}  |')
             board_output.append(middle_separator)
 
-        # reverse and print
-        board_output.pop()  # remove last separator that is not required
+        # add column number at top
+        row_output = ' |  '.join([str(num) for num in range(1, NUM_COLS + 1)])
+        board_output.append(f'|  {row_output} |')
 
-        # add TODO column numbers at top
         return '\n'.join(reversed(board_output))
 
     def __repr__(self):
@@ -192,11 +192,11 @@ class ConnectFour:
         except ValueError:
             return GameStatus(False, 'Please enter a number')
 
-        if not (0 <= column <= NUM_COLS):
+        if not (1 <= column <= (NUM_COLS + 1)):
             return GameStatus(False,
-                              f'Please enter a valid column (0-{NUM_COLS})')
+                              f'Please enter a valid column (1-{NUM_COLS+1})')
 
-        turn_success, position = self.board.drop_piece(column, self.turn)
+        turn_success, position = self.board.drop_piece(column - 1, self.turn)
         if not turn_success:
             return GameStatus(False, 'Position is already taken, try again')
 
